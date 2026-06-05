@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Symphony Hub - Multi-Speaker Matrix</title>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        :root {
+            --primary: #00f0ff;
+            --accent: #ff007f;
+            --bg: #05050a;
+            --panel: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-dim: #8a8a9e;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: radial-gradient(circle at 50% 0%, #120c2b 0%, var(--bg) 70%);
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 95vh;
+        }
+
+        h1 {
+            font-weight: 800;
+            background: linear-gradient(to right, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text; /* Clears VSCode validation flag */
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 5px;
+            animation: pulseGlow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseGlow {
+            0% { filter: drop-shadow(0 0 5px rgba(0, 240, 255, 0.2)); }
+            100% { filter: drop-shadow(0 0 15px rgba(255, 0, 127, 0.6)); }
+        }
+
+        .container {
+            background: var(--panel);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 28px;
+            padding: 30px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6);
+            text-align: center;
+        }
+
+        .tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .tab {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            padding: 10px;
+            border-radius: 12px;
+            color: #ccc;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .tab.active {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+            border-color: var(--primary);
+        }
+
+        .input-panel {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 25px;
+            border: 1px solid var(--border);
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .input-field {
+            width: 90%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: 10px;
+            color: white;
+            outline: none;
+            text-align: center;
+            font-size: 1rem;
+        }
+
+        .dropzone {
+            border: 2px dashed rgba(255, 255, 255, 0.15);
+            padding: 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 90%;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.01);
+            position: relative;
+        }
+
+        .dropzone:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.1);
+        }
+
+        .dropzone span.icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+        .dropzone input[type="file"] { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+        .speaker-select-panel {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+            max-height: 240px;
+            overflow-y: auto; /* Adds clean scrollbar if you add many speakers */
+        }
+
+        .speaker-select-panel h3 {
+            margin: 0 0 12px 0;
+            font-size: 0.9rem;
+            color: var(--primary);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .speaker-btn {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-align: left;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .speaker-btn:hover {
+            background: rgba(0, 240, 255, 0.08);
+            border-color: var(--primary);
+        }
+
+        .speaker-btn.active {
+            border-color: var(--primary);
+            background: rgba(0, 240, 255, 0.12);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.15);
+        }
+
+        .visualizer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 6px;
+            height: 40px;
+            margin: 20px 0;
+        }
+
+        .bar { width: 4px; height: 10px; background: var(--primary); border-radius: 10px; transition: all 0.2s; }
+        .playing .bar { animation: bounce 0.6s ease-in-out infinite alternate; }
+        .playing .bar:nth-child(2) { animation-delay: 0.1s; background: #33f3ff; }
+        .playing .bar:nth-child(3) { animation-delay: 0.2s; background: #7000ff; }
+        .playing .bar:nth-child(4) { animation-delay: 0.3s; background: var(--accent); }
+        .playing .bar:nth-child(5) { animation-delay: 0.4s; background: #ff55bb; }
+
+        @keyframes bounce { 0% { height: 5px; } 100% { height: 40px; } }
+
+        .control-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .btn { padding: 16px; border: none; border-radius: 14px; font-size: 1rem; font-weight: bold; cursor: pointer; transition: all 0.2s; }
+        .btn-play { background: linear-gradient(135deg, var(--primary), #00a8ff); color: #000; }
+        .btn-stop { background: rgba(255,255,255,0.08); color: white; border: 1px solid var(--border); }
+        
+        #track-status { font-size: 0.8rem; color: var(--text-dim); margin-top: 12px; }
+        #audio-pipeline-container { display: none; } /* Hidden backend hardware streams */
+    </style>
+</head>
+<body>
+
+    <h1>Symphony Hub</h1>
+    <p style="color: var(--text-dim); margin-top: 0; font-size:0.9rem;">Massive Sound System Matrix Control</p>
+
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" onclick="switchSource('local', event)">📁 Local</div>
+            <div class="tab" onclick="switchSource('youtube', event)">📺 YouTube</div>
+            <div class="tab" onclick="openSpotify(event)">🟢 Spotify</div>
+        </div>
+
+        <div class="input-panel" id="dynamic-input">
+            <div class="dropzone">
+                <span class="icon">📥</span>
+                <p id="file-string">Drop audio file here</p>
+                <p class="subtext">or click to browse device</p>
+                <input type="file" id="local-file" accept="audio/*" onchange="loadLocalFile(this)">
+            </div>
+        </div>
+
+        <div class="speaker-select-panel">
+            <h3>Active Speaker Matrix Nodes</h3>
+            <div id="speaker-buttons-container"></div>
+        </div>
+
+        <div class="visualizer" id="visualizer-node">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+
+        <div class="control-btns">
+            <button class="btn btn-stop" onclick="controlPlayback('pause')">Pause</button>
+            <button class="btn btn-play" onclick="controlPlayback('play')">Play Matrix</button>
+        </div>
+        <div id="track-status">No track loaded</div>
+    </div>
+
+    <div id="audio-pipeline-container"></div>
+    <div id="yt-player-hidden" style="display:none;"></div>
+
+    <script>
+        // CONFIGURATION: Set this number to as many speakers as you want!
+        const TOTAL_SPEAKERS = 6; 
+        
+        let currentSource = 'local';
+        let ytPlayer;
+        let selectedFileBlob = null;
+
+        const visualizer = document.getElementById('visualizer-node');
+        const dynamicInput = document.getElementById('dynamic-input');
+        const trackStatus = document.getElementById('track-status');
+        const buttonsContainer = document.getElementById('speaker-buttons-container');
+        const pipelineContainer = document.getElementById('audio-pipeline-container');
+
+        // MATRIX GENERATION ENGINE: Builds audio channels and mapping buttons instantly
+        for (let i = 1; i <= TOTAL_SPEAKERS; i++) {
+            // 1. Create hidden matching audio pipeline tag
+            const audioTag = document.createElement('audio');
+            audioTag.id = `audio-ch-${i}`;
+            audioTag.setAttribute('crossorigin', 'anonymous');
+            pipelineContainer.appendChild(audioTag);
+
+            // 2. Create interactive dashboard selection button
+            const btn = document.createElement('button');
+            btn.className = 'speaker-btn';
+            btn.id = `tgt-${i}`;
+            btn.innerHTML = `🔊 Link Speaker Box Channel ${i}`;
+            btn.onclick = () => assignSpeaker(i);
+            buttonsContainer.appendChild(btn);
+        }
+
+        function onYouTubeIframeAPIReady() {
+            ytPlayer = new YT.Player('yt-player-hidden', {
+                height: '0', width: '0',
+                events: { 'onStateChange': onPlayerStateChange }
+            });
+        }
+
+        // Direct Browser Hardware Multi-Routing Link
+        async function assignSpeaker(channelNum) {
+            try {
+                if (!navigator.mediaDevices || !navigator.mediaDevices.selectAudioOutput) {
+                    alert("Hardware multi-routing requires visiting via 'localhost' or an HTTPS deployed domain.");
+                    return;
+                }
+                
+                const device = await navigator.mediaDevices.selectAudioOutput();
+                const targetAudioTag = document.getElementById(`audio-ch-${channelNum}`);
+                
+                // Directly bind this specific hardware channel to this audio element
+                await targetAudioTag.setSinkId(device.deviceId);
+                
+                const btn = document.getElementById(`tgt-${channelNum}`);
+                btn.classList.add('active');
+                btn.innerHTML = `✅ Linked Box ${channelNum}: <span style="color:var(--primary); font-size:0.8rem;">${device.label.substring(0, 15)}...</span>`;
+            } catch (err) {
+                console.error("Hardware route assignment rejected:", err);
+            }
+        }
+
+        function switchSource(source, event) {
+            currentSource = source;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            controlPlayback('pause');
+
+            if (source === 'local') {
+                dynamicInput.innerHTML = `
+                    <div class="dropzone">
+                        <span class="icon">📥</span>
+                        <p id="file-string">Drop audio file here</p>
+                        <p class="subtext">or click to browse device</p>
+                        <input type="file" id="local-file" accept="audio/*" onchange="loadLocalFile(this)">
+                    </div>`;
+            } else if (source === 'youtube') {
+                dynamicInput.innerHTML = `<input type="text" class="input-field" id="yt-url" placeholder="Paste YouTube Video ID" oninput="loadYTVideo()">`;
+            }
+        }
+
+        function loadLocalFile(input) {
+            const file = input.files[0];
+            if (file) {
+                selectedFileBlob = URL.createObjectURL(file);
+                // Dynamically clone the file destination data into all active audio paths
+                for (let i = 1; i <= TOTAL_SPEAKERS; i++) {
+                    const ch = document.getElementById(`audio-ch-${i}`);
+                    ch.src = selectedFileBlob;
+                    ch.load();
+                }
+                trackStatus.innerText = `Loaded: ${file.name}`;
+            }
+        }
+
+        function loadYTVideo() {
+            const val = document.getElementById('yt-url').value;
+            if(val && ytPlayer) {
+                ytPlayer.cueVideoById(val);
+                trackStatus.innerText = `YouTube Track Primed`;
+            }
+        }
+
+        function controlPlayback(action) {
+            if (action === 'play') {
+                visualizer.classList.add('playing');
+                if (currentSource === 'local' && selectedFileBlob) {
+                    for (let i = 1; i <= TOTAL_SPEAKERS; i++) {
+                        document.getElementById(`audio-ch-${i}`).play();
+                    }
+                }
+                if (currentSource === 'youtube' && ytPlayer) {
+                    ytPlayer.playVideo();
+                }
+            } else {
+                visualizer.classList.remove('playing');
+                for (let i = 1; i <= TOTAL_SPEAKERS; i++) {
+                    document.getElementById(`audio-ch-${i}`).pause();
+                }
+                if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+            }
+        }
+
+        function openSpotify(event) {
+            alert("Spotify uses DRM protection inside browsers. To play Spotify across 5+ speakers from a single machine, configure your speakers as a single grouped array inside your Windows/Mac system control panel.");
+            window.open('https://open.spotify.com', '_blank');
+        }
+
+        function onPlayerStateChange(event) {
+            if(event.data == YT.PlayerState.PLAYING) visualizer.classList.add('playing');
+            else visualizer.classList.remove('playing');
+        }
+    </script>
+</body>
+</html>
